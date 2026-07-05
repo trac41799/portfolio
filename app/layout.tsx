@@ -16,7 +16,7 @@ const serif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nguyendangtrac.dev"),
+  metadataBase: new URL("https://nguyendangtrac.vercel.app"),
   title: {
     default: `${profile.name} — ${profile.role}`,
     template: `%s · ${profile.name}`,
