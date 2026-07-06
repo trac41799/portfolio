@@ -1,11 +1,8 @@
 import { ChatOpenAI } from "@langchain/openai";
 import type { BaseMessageLike } from "@langchain/core/messages";
-import {
-  uiComponentSchema,
-  UI_COMPONENT_NAMES,
-  type UIComponentName,
-} from "./contracts";
+import { UI_COMPONENT_NAMES, type UIComponentName } from "./contracts";
 import { createFakeBrain } from "./fake-model";
+import { buildComponentProps } from "./component-data";
 
 export type Provider = "deepseek" | "openrouter" | "fake";
 
@@ -147,23 +144,9 @@ function createRealBrain(provider: "deepseek" | "openrouter"): Brain {
     async props(
       input: BrainInput & { component: UIComponentName },
     ): Promise<unknown> {
-      const messages: BaseMessageLike[] = [
-        [
-          "system",
-          `${systemGrounding} Produce ONLY the JSON "props" object for a "${input.component}" UI component, grounded in the context. Respond with strict JSON (no prose, no markdown fences).`,
-        ],
-        ["human", `Context:\n${input.context}\n\nRequest: ${input.query}`],
-      ];
-      const res = await getModel().invoke(messages);
-      const props = JSON.parse(extractJson(contentToString(res.content)));
-      const parsed = uiComponentSchema.safeParse({
-        component: input.component,
-        props,
-      });
-      if (!parsed.success) {
-        throw new Error(`Invalid props for ${input.component}`);
-      }
-      return props;
+      // Component data is sourced from Trac's own structured data — never
+      // paraphrased by the LLM — so it is always schema-valid and factual.
+      return buildComponentProps(input.component);
     },
     async artifactHtml(input: BrainInput): Promise<string> {
       const messages: BaseMessageLike[] = [

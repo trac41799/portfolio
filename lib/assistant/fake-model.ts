@@ -1,8 +1,8 @@
-import { projects, publications, skills } from "@/lib/data";
+import { skills } from "@/lib/data";
 import type { UIComponentName } from "./contracts";
-import facts from "./corpus/facts.json";
 import type { Brain, BrainInput, RouteDecision } from "./provider";
 import { isOffTopic, ruleRoute } from "./routing";
+import { buildComponentProps } from "./component-data";
 
 function decide(query: string): RouteDecision {
   if (isOffTopic(query)) return { route: "refuse" };
@@ -29,72 +29,6 @@ const FAKE_WIDGET_CODE = `function Widget({ data }) {
     </div>
   );
 }`;
-
-function buildProps(component: UIComponentName): unknown {
-  switch (component) {
-    case "timeline":
-      return {
-        items: facts.timeline.map((t) => ({
-          date: t.date,
-          title: t.title,
-          detail: t.detail,
-        })),
-      };
-    case "comparison": {
-      const [lms, travel] = projects;
-      return {
-        columns: ["AI LMS", "Travel Buddy"],
-        rows: [
-          { label: "Role", values: [lms.role, travel.role] },
-          {
-            label: "Core stack",
-            values: [lms.stack.join(", "), travel.stack.join(", ")],
-          },
-          {
-            label: "Scale",
-            values: [lms.signal ?? "—", travel.signal ?? "—"],
-          },
-        ],
-      };
-    }
-    case "projectCard": {
-      const p = projects[0];
-      return {
-        slug: p.slug,
-        title: p.title,
-        stack: [...p.stack],
-        highlights: [...p.highlights],
-        signal: p.signal,
-      };
-    }
-    case "metricGrid":
-      return {
-        metrics: facts.metrics.map((m) => ({ value: m.value, label: m.label })),
-      };
-    case "skillMatrix":
-      return {
-        groups: skills.map((s) => ({ name: s.group, items: [...s.items] })),
-      };
-    case "publicationList":
-      return {
-        pubs: publications.map((pub) => ({
-          citation: pub.citation,
-          venue: pub.venue,
-          year: pub.year,
-          note: pub.note,
-          href: pub.href,
-        })),
-      };
-    case "contactCard":
-      return {
-        email: facts.identity.email,
-        links: [
-          { label: "GitHub", href: facts.identity.github },
-          { label: "LinkedIn", href: facts.identity.linkedin },
-        ],
-      };
-  }
-}
 
 export function createFakeBrain(): Brain {
   const brain: Brain = {
@@ -135,7 +69,7 @@ export function createFakeBrain(): Brain {
     async props(
       input: BrainInput & { component: UIComponentName },
     ): Promise<unknown> {
-      return buildProps(input.component);
+      return buildComponentProps(input.component);
     },
     async artifactHtml(_input: BrainInput): Promise<string> {
       return [
