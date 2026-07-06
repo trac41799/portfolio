@@ -113,7 +113,10 @@ function createRealBrain(provider: "deepseek" | "openrouter"): Brain {
     },
     async answer(input: BrainInput): Promise<string> {
       const messages: BaseMessageLike[] = [
-        ["system", systemGrounding],
+        [
+          "system",
+          `${systemGrounding} Format your answer in GitHub-flavored Markdown (use bold, bullet lists, tables, and \`inline code\` where helpful). When a compact visual summary would help, you MAY include a single fenced \`\`\`html-inline block containing safe, presentational HTML only (no <script>, no event handlers, inline styles allowed). Keep answers concise.`,
+        ],
         ["human", `Context:\n${input.context}\n\nQuestion: ${input.query}`],
       ];
       const res = await getModel().invoke(messages);

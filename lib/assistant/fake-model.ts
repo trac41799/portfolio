@@ -101,12 +101,25 @@ export function createFakeBrain(): Brain {
       return decide(input.query);
     },
     async answer(input: BrainInput): Promise<string> {
-      const base =
-        "Nguyen Dang Trac is an AI Automation Engineer at Edge8 AI, where he builds from-scratch multi-agent systems, retrieval-augmented generation pipelines, and multi-tenant SaaS platforms shipped to production on Supabase and Vercel.";
+      const base = [
+        "**Nguyen Dang Trac** is an *AI Automation Engineer* at **Edge8 AI**, where he builds AI-native products end to end. Recent work includes:",
+        "",
+        "- From-scratch multi-agent systems (router → planner → executor)",
+        "- RAG pipelines with hybrid search (`pgvector`, FAISS, BM25)",
+        "- Streaming AI UX and inline generative-UI artifacts",
+        "",
+        "```html-inline",
+        '<div style="border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:14px 16px">',
+        '  <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#e5b567">Current role</div>',
+        '  <div style="font-size:17px;margin-top:4px;font-weight:600">AI Automation Engineer · Edge8 AI</div>',
+        '  <div style="color:#8c8c86;margin-top:6px">Multi-tenant SaaS · agentic systems · RAG · streaming UX</div>',
+        "</div>",
+        "```",
+      ].join("\n");
       const ctx = input.context.trim();
       if (ctx) {
-        const slice = ctx.replace(/\s+/g, " ").slice(0, 240);
-        return `${base} Drawing on his background: ${slice}`;
+        const slice = ctx.replace(/[#>*_`]/g, "").replace(/\s+/g, " ").slice(0, 200);
+        return `${base}\n\n> ${slice}`;
       }
       return base;
     },

@@ -2,6 +2,7 @@
 
 import { GenerativeUIRenderer } from "./generative-ui";
 import { ArtifactSandbox } from "./artifact-sandbox";
+import { MarkdownRenderer } from "./markdown/markdown-renderer";
 import type { ChatMessage } from "./types";
 
 export function MessageList({
@@ -48,9 +49,7 @@ export function MessageList({
             ) : null}
 
             {message.content ? (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">
-                {message.content}
-              </p>
+              <MarkdownRenderer>{message.content}</MarkdownRenderer>
             ) : null}
 
             {message.ui.map((component, i) => (

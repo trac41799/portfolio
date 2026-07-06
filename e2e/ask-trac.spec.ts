@@ -12,6 +12,23 @@ async function ask(page: Page, text: string) {
   await page.getByTestId("ask-trac-send").click();
 }
 
+test.beforeAll(async ({ playwright }) => {
+  // Warm the /api/chat route so Next's lazy dev compilation doesn't make the
+  // first in-test request time out.
+  const ctx = await playwright.request.newContext({
+    baseURL: "http://localhost:3000",
+  });
+  try {
+    await ctx.post("/api/chat", {
+      data: { messages: [{ role: "user", content: "warmup" }] },
+      timeout: 90_000,
+    });
+  } catch {
+    // ignore — the real assertions live in the tests
+  }
+  await ctx.dispose();
+});
+
 test.beforeEach(async ({ page }) => {
   errors = [];
   page.on("console", (m: ConsoleMessage) => {
@@ -34,7 +51,16 @@ test("AC-E2: a factual question streams a reasoning trail and a grounded answer"
   await openPanel(page);
   await ask(page, "What did he build at Edge8 AI?");
   await expect(page.getByTestId("reasoning-trail")).toBeVisible();
-  await expect(page.getByTestId("assistant-message").first()).toContainText(/Edge8|Trac/i);
+  const msg = page.getByTestId("assistant-message").first();
+  await expect(msg).toContainText(/Edge8|Trac/i);
+  // markdown is parsed (not shown as raw text): bold + list render as real elements
+  await expect(msg.locator("strong").first()).toBeVisible();
+  await expect(msg.locator(".md-content li").first()).toBeVisible();
+  // the inline generative-UI (html-inline) card renders in its sandboxed host
+  await expect(page.getByTestId("html-inline").first()).toBeVisible();
+  // the raw fence language must never leak as visible text
+  await expect(page.getByText("html-inline")).toHaveCount(0);
+  await expect(page.getByText("```")).toHaveCount(0);
 });
 
 test("AC-E3: a comparison request renders a comparison component", async ({ page }) => {
