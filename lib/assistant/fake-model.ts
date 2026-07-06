@@ -2,33 +2,11 @@ import { projects, publications, skills } from "@/lib/data";
 import type { UIComponentName } from "./contracts";
 import facts from "./corpus/facts.json";
 import type { Brain, BrainInput, RouteDecision } from "./provider";
-
-const REFUSE_RE =
-  /weather|stock price|recipe|capital of|\b\d+\s*[+\-*/]\s*\d+\b|ignore (previous|above)|system prompt|tell me a joke/;
-const COMPARISON_RE = /compare|comparison|versus|\bvs\b|difference between/;
-const REACT_RE = /interactive|widget|toggle|calculator|playground|explore/;
-const ARTIFACT_RE =
-  /one[- ]?page|poster|brochure|recruiter summary|design (a|me)|summary/;
-const TIMELINE_RE =
-  /timeline|career|journey|\bpath\b|work history|experience/;
-const PUBLICATION_RE = /publication|research|paper|ieee/;
-const SKILL_RE = /skill|stack|tech stack|tools|toolkit/;
-const METRIC_RE = /metric|numbers|stats|impact/;
-const CONTACT_RE = /contact|email|reach|hire|linkedin|github/;
+import { isOffTopic, ruleRoute } from "./routing";
 
 function decide(query: string): RouteDecision {
-  const q = query.toLowerCase();
-  if (REFUSE_RE.test(q)) return { route: "refuse" };
-  if (COMPARISON_RE.test(q)) return { route: "renderUI", component: "comparison" };
-  if (REACT_RE.test(q)) return { route: "makeReactWidget" };
-  if (ARTIFACT_RE.test(q)) return { route: "makeArtifact" };
-  if (TIMELINE_RE.test(q)) return { route: "renderUI", component: "timeline" };
-  if (PUBLICATION_RE.test(q))
-    return { route: "renderUI", component: "publicationList" };
-  if (SKILL_RE.test(q)) return { route: "renderUI", component: "skillMatrix" };
-  if (METRIC_RE.test(q)) return { route: "renderUI", component: "metricGrid" };
-  if (CONTACT_RE.test(q)) return { route: "renderUI", component: "contactCard" };
-  return { route: "answer" };
+  if (isOffTopic(query)) return { route: "refuse" };
+  return ruleRoute(query) ?? { route: "answer" };
 }
 
 const FAKE_WIDGET_CODE = `function Widget({ data }) {

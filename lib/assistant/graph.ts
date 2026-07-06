@@ -10,9 +10,7 @@ import type { Brain } from "./provider";
 import { retrieve } from "./retriever";
 import { sanitizeArtifact } from "./sanitize";
 import { validateReactCode } from "./react-validator";
-
-const REFUSE_RE =
-  /weather|stock price|recipe|capital of|\b\d+\s*[+\-*/]\s*\d+\b|ignore (previous|above)|system prompt|tell me a joke/;
+import { isOffTopic, ruleRoute } from "./routing";
 
 const AssistantState = Annotation.Root({
   query: Annotation<string>({ reducer: (_prev, next) => next, default: () => "" }),
@@ -97,8 +95,8 @@ export function buildGraph(brain: Brain) {
   const graph = new StateGraph(AssistantState)
     .addNode(
       "guard",
-      async (state, config: LangGraphRunnableConfig) => {
-        if (REFUSE_RE.test(state.query.toLowerCase())) {
+      async (state) => {
+        if (isOffTopic(state.query)) {
           return { route: "refuse" };
         }
         return {};
@@ -127,15 +125,19 @@ export function buildGraph(brain: Brain) {
     .addNode(
       "classify",
       async (state, config: LangGraphRunnableConfig) => {
-        const decision = await brain.route({
-          query: state.query,
-          context: state.context,
-        });
+        // Deterministic rule-based fast-path first; defer to the LLM router only
+        // when no rule matches. The LLM can never refuse (guard owns that), so
+        // on-topic questions are never wrongly declined.
+        const ruled = ruleRoute(state.query);
+        const decision =
+          ruled ??
+          (await brain.route({ query: state.query, context: state.context }));
+        const route = decision.route === "refuse" ? "answer" : decision.route;
         config.writer?.({
           type: "reasoning",
-          step: decisionLabel(decision.route, decision.component),
+          step: decisionLabel(route, decision.component),
         });
-        return { route: decision.route, component: decision.component };
+        return { route, component: decision.component };
       },
     )
     .addNode(
