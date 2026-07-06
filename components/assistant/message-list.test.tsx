@@ -7,6 +7,7 @@ const message: ChatMessage = {
   id: "1",
   role: "assistant",
   content: "Here is a comparison.",
+  status: "done",
   reasoning: [],
   ui: [
     {
@@ -48,5 +49,18 @@ describe("MessageList", () => {
     const frame = screen.getByTestId("react-frame") as HTMLIFrameElement;
     expect(frame.getAttribute("sandbox")).toContain("allow-scripts");
     expect(frame.getAttribute("sandbox")).not.toContain("allow-same-origin");
+  });
+
+  it("shows a typing indicator while thinking with no content yet", () => {
+    const thinking: ChatMessage = {
+      ...message,
+      id: "3",
+      content: "",
+      status: "thinking",
+      ui: [],
+      followups: [],
+    };
+    render(<MessageList messages={[thinking]} />);
+    expect(screen.getByTestId("typing-indicator")).toBeInTheDocument();
   });
 });

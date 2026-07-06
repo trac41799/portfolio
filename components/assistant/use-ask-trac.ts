@@ -18,6 +18,7 @@ function createMessage(
     id: crypto.randomUUID(),
     role,
     content,
+    status: role === "assistant" ? "thinking" : "done",
     reasoning: [],
     ui: [],
     artifacts: [],
@@ -28,13 +29,12 @@ function createMessage(
 
 type Updater = (fn: (message: ChatMessage) => ChatMessage) => void;
 
-function applyEvent(update: Updater, event: AssistantEvent): void {
+/** Apply a discrete (infrequent) event immediately. Content deltas are handled
+ *  separately via requestAnimationFrame coalescing for smooth, cheap rendering. */
+function applyDiscreteEvent(update: Updater, event: AssistantEvent): void {
   switch (event.type) {
     case "reasoning":
       update((m) => ({ ...m, reasoning: [...m.reasoning, event.step] }));
-      break;
-    case "content":
-      update((m) => ({ ...m, content: m.content + event.text }));
       break;
     case "ui":
       update((m) => ({ ...m, ui: [...m.ui, event.component] }));
@@ -61,12 +61,7 @@ function applyEvent(update: Updater, event: AssistantEvent): void {
         ...m,
         reactWidgets: [
           ...m.reactWidgets,
-          {
-            id: event.id,
-            title: event.title,
-            code: event.code,
-            data: event.data,
-          },
+          { id: event.id, title: event.title, code: event.code, data: event.data },
         ],
       }));
       break;
@@ -74,8 +69,9 @@ function applyEvent(update: Updater, event: AssistantEvent): void {
       update((m) => ({ ...m, followups: event.questions }));
       break;
     case "error":
-      update((m) => ({ ...m, error: event.message }));
+      update((m) => ({ ...m, error: event.message, status: "done" }));
       break;
+    case "content":
     case "done":
       break;
   }
@@ -97,9 +93,31 @@ export function useAskTrac(): UseAskTrac {
     setIsStreaming(true);
 
     const update: Updater = (fn) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? fn(m) : m)),
-      );
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? fn(m) : m)));
+    };
+
+    // --- requestAnimationFrame-coalesced content buffer -------------------
+    let pending = "";
+    let rafId: number | null = null;
+    const hasRaf = typeof requestAnimationFrame === "function";
+
+    const flush = () => {
+      rafId = null;
+      if (!pending) return;
+      const chunk = pending;
+      pending = "";
+      update((m) => ({
+        ...m,
+        content: m.content + chunk,
+        status: "streaming",
+      }));
+    };
+    const scheduleFlush = () => {
+      if (!hasRaf) {
+        flush();
+        return;
+      }
+      if (rafId === null) rafId = requestAnimationFrame(flush);
     };
 
     try {
@@ -110,14 +128,23 @@ export function useAskTrac(): UseAskTrac {
       });
 
       const body = response.body;
-      if (!body) {
-        return;
-      }
+      if (!body) return;
 
       const reader = body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let finished = false;
+
+      const handle = (event: AssistantEvent) => {
+        if (event.type === "content") {
+          pending += event.text;
+          scheduleFlush();
+        } else if (event.type === "done") {
+          finished = true;
+        } else {
+          applyDiscreteEvent(update, event);
+        }
+      };
 
       while (!finished) {
         const { value, done } = await reader.read();
@@ -128,19 +155,14 @@ export function useAskTrac(): UseAskTrac {
         while (boundary !== -1) {
           const block = buffer.slice(0, boundary + 2);
           buffer = buffer.slice(boundary + 2);
-          for (const event of parseSSE(block)) {
-            if (event.type === "done") finished = true;
-            applyEvent(update, event);
-          }
+          for (const event of parseSSE(block)) handle(event);
           if (finished) break;
           boundary = buffer.indexOf("\n\n");
         }
       }
 
-      if (!finished && buffer.trim()) {
-        for (const event of parseSSE(buffer)) {
-          applyEvent(update, event);
-        }
+      if (buffer.trim()) {
+        for (const event of parseSSE(buffer)) handle(event);
       }
     } catch {
       update((m) => ({
@@ -148,6 +170,16 @@ export function useAskTrac(): UseAskTrac {
         error: "Something went wrong while answering. Please try again.",
       }));
     } finally {
+      if (rafId !== null && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(rafId);
+      }
+      // Final synchronous flush so the completed message is fully rendered.
+      if (pending) {
+        const chunk = pending;
+        pending = "";
+        update((m) => ({ ...m, content: m.content + chunk }));
+      }
+      update((m) => ({ ...m, status: "done" }));
       setIsStreaming(false);
     }
   }, []);

@@ -34,6 +34,26 @@ describe("runAssistant", () => {
     expect(events[events.length - 1]).toEqual({ type: "done" });
   });
 
+  it("streams the answer as multiple content deltas", async () => {
+    const events = await collect(ask("Who is he, in a few sentences?"));
+    const contentEvents = events.filter((e) => e.type === "content");
+    expect(contentEvents.length).toBeGreaterThanOrEqual(3);
+    const full = contentEvents
+      .map((e) => (e.type === "content" ? e.text : ""))
+      .join("");
+    expect(full.length).toBeGreaterThan(50);
+  });
+
+  it("emits factual reasoning naming real retrieved sources (not canned labels)", async () => {
+    const events = await collect(ask("What did he build at Edge8 AI?"));
+    const reasoning = events
+      .filter((e) => e.type === "reasoning")
+      .map((e) => (e.type === "reasoning" ? e.step : ""));
+    expect(reasoning.some((r) => /Found \d+ source/.test(r))).toBe(true);
+    expect(reasoning.some((r) => r === "Understanding your question")).toBe(false);
+    expect(reasoning.some((r) => r === "Answering")).toBe(false);
+  });
+
   it("renders exactly one valid comparison UI", async () => {
     const events = await collect(
       ask("Compare the LMS and Travel Buddy projects"),

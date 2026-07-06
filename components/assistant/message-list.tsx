@@ -3,7 +3,8 @@
 import { GenerativeUIRenderer } from "./generative-ui";
 import { ArtifactSandbox } from "./artifact-sandbox";
 import { ReactArtifactSandbox } from "./react-artifact-sandbox";
-import { MarkdownRenderer } from "./markdown/markdown-renderer";
+import { RevealText } from "./reveal-text";
+import { TypingIndicator } from "./typing-indicator";
 import type { ChatMessage } from "./types";
 
 export function MessageList({
@@ -50,7 +51,14 @@ export function MessageList({
             ) : null}
 
             {message.content ? (
-              <MarkdownRenderer>{message.content}</MarkdownRenderer>
+              <RevealText
+                content={message.content}
+                streaming={message.status !== "done"}
+              />
+            ) : null}
+
+            {message.status === "thinking" && !message.content ? (
+              <TypingIndicator />
             ) : null}
 
             {message.ui.map((component, i) => (

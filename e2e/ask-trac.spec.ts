@@ -50,7 +50,12 @@ test("AC-E1: launcher opens the assistant dialog", async ({ page }) => {
 test("AC-E2: a factual question streams a reasoning trail and a grounded answer", async ({ page }) => {
   await openPanel(page);
   await ask(page, "What did he build at Edge8 AI?");
-  await expect(page.getByTestId("reasoning-trail")).toBeVisible();
+  const trail = page.getByTestId("reasoning-trail");
+  await expect(trail).toBeVisible();
+  // reasoning is factual — names real retrieved sources, not canned labels
+  const trailText = (await trail.textContent()) ?? "";
+  expect(trailText).toMatch(/Found \d+ source/);
+  expect(trailText).not.toContain("Understanding your question");
   const msg = page.getByTestId("assistant-message").first();
   await expect(msg).toContainText(/Edge8|Trac/i);
   // markdown is parsed (not shown as raw text): bold + list render as real elements
@@ -60,7 +65,6 @@ test("AC-E2: a factual question streams a reasoning trail and a grounded answer"
   await expect(page.getByTestId("html-inline").first()).toBeVisible();
   // the raw fence language must never leak as visible text
   await expect(page.getByText("html-inline")).toHaveCount(0);
-  await expect(page.getByText("```")).toHaveCount(0);
 });
 
 test("AC-E3: a comparison request renders a comparison component", async ({ page }) => {

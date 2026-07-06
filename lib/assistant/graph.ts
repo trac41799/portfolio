@@ -59,6 +59,21 @@ function followupsFor(query: string): string[] {
   ];
 }
 
+function decisionLabel(route: string, component?: UIComponentName): string {
+  switch (route) {
+    case "renderUI":
+      return `Building a ${component ?? "view"}`;
+    case "makeArtifact":
+      return "Composing a one-page summary";
+    case "makeReactWidget":
+      return "Generating an interactive widget";
+    case "refuse":
+      return "Out of scope — declining politely";
+    default:
+      return "Answering directly";
+  }
+}
+
 function introFor(component: UIComponentName): string {
   switch (component) {
     case "comparison":
@@ -83,10 +98,6 @@ export function buildGraph(brain: Brain) {
     .addNode(
       "guard",
       async (state, config: LangGraphRunnableConfig) => {
-        config.writer?.({
-          type: "reasoning",
-          step: "Understanding your question",
-        });
         if (REFUSE_RE.test(state.query.toLowerCase())) {
           return { route: "refuse" };
         }
@@ -96,13 +107,20 @@ export function buildGraph(brain: Brain) {
     .addNode(
       "retrieve",
       async (state, config: LangGraphRunnableConfig) => {
+        config.writer?.({ type: "reasoning", step: "Looking up sources" });
+        const docs = retrieve(state.query);
+        const context = docs.map((doc) => doc.text).join("\n\n");
+        const labels = docs
+          .map((d) => d.source)
+          .slice(0, 8)
+          .join(", ");
         config.writer?.({
           type: "reasoning",
-          step: "Reading Trac's background",
+          step: `Found ${docs.length} source${docs.length !== 1 ? "s" : ""}: ${labels}`.slice(
+            0,
+            280,
+          ),
         });
-        const context = retrieve(state.query)
-          .map((doc) => doc.text)
-          .join("\n\n");
         return { context };
       },
     )
@@ -115,7 +133,7 @@ export function buildGraph(brain: Brain) {
         });
         config.writer?.({
           type: "reasoning",
-          step: decision.route === "answer" ? "Answering" : "Preparing a response",
+          step: decisionLabel(decision.route, decision.component),
         });
         return { route: decision.route, component: decision.component };
       },
@@ -123,11 +141,25 @@ export function buildGraph(brain: Brain) {
     .addNode(
       "answer",
       async (state, config: LangGraphRunnableConfig) => {
-        const text = await brain.answer({
+        let streamed = "";
+        for await (const part of brain.answerStream({
           query: state.query,
           context: state.context,
-        });
-        config.writer?.({ type: "content", text });
+        })) {
+          if (part.delta) {
+            streamed += part.delta;
+            config.writer?.({ type: "content", text: part.delta });
+          }
+        }
+        if (!streamed) {
+          config.writer?.({
+            type: "content",
+            text: await brain.answer({
+              query: state.query,
+              context: state.context,
+            }),
+          });
+        }
         config.writer?.({
           type: "followups",
           questions: followupsFor(state.query),
@@ -148,10 +180,6 @@ export function buildGraph(brain: Brain) {
           });
           const parsed = safeParseUIComponent({ component, props });
           if (!parsed) throw new Error("invalid UI component");
-          config.writer?.({
-            type: "reasoning",
-            step: `Building a ${component}`,
-          });
           config.writer?.({ type: "ui", component: parsed });
           config.writer?.({ type: "content", text: introFor(component) });
           config.writer?.({
@@ -180,7 +208,6 @@ export function buildGraph(brain: Brain) {
           context: state.context,
         });
         const html = sanitizeArtifact(raw);
-        config.writer?.({ type: "reasoning", step: "Designing an artifact" });
         config.writer?.({
           type: "artifact",
           id: "art-1",
@@ -218,10 +245,6 @@ export function buildGraph(brain: Brain) {
           });
           const verdict = validateReactCode(code);
           if (!verdict.ok) throw new Error(verdict.reason ?? "invalid widget");
-          config.writer?.({
-            type: "reasoning",
-            step: "Building an interactive view",
-          });
           config.writer?.({
             type: "react_artifact",
             id: "react-1",

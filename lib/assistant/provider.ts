@@ -22,6 +22,7 @@ export interface RouteDecision {
 export interface Brain {
   route(input: BrainInput): Promise<RouteDecision>;
   answer(input: BrainInput): Promise<string>;
+  answerStream(input: BrainInput): AsyncIterable<{ delta?: string; reasoningDelta?: string }>;
   props(input: BrainInput & { component: UIComponentName }): Promise<unknown>;
   artifactHtml(input: BrainInput): Promise<string>;
   reactWidget(input: BrainInput): Promise<{ code: string; data?: unknown }>;
@@ -123,6 +124,25 @@ function createRealBrain(provider: "deepseek" | "openrouter"): Brain {
       ];
       const res = await getModel().invoke(messages);
       return contentToString(res.content);
+    },
+    async *answerStream(input: BrainInput) {
+      const messages: BaseMessageLike[] = [
+        [
+          "system",
+          `${systemGrounding} Format your answer in GitHub-flavored Markdown (use bold, bullet lists, tables, and \`inline code\` where helpful). When a compact visual summary would help, you MAY include a single fenced \`\`\`html-inline block containing safe, presentational HTML only (no <script>, no event handlers, inline styles allowed). Keep answers concise.`,
+        ],
+        ["human", `Context:\n${input.context}\n\nQuestion: ${input.query}`],
+      ];
+      try {
+        const stream = await getModel().stream(messages);
+        for await (const chunk of stream) {
+          const text = contentToString(chunk.content);
+          if (text) yield { delta: text };
+        }
+      } catch {
+        const full = await this.answer(input);
+        yield { delta: full };
+      }
     },
     async props(
       input: BrainInput & { component: UIComponentName },

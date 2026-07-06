@@ -104,7 +104,42 @@ body::after {
   }
 }
 
-/* Animated hairline underline for links */
+/* Assistant streaming: typing indicator + caret */
+@keyframes caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+.animate-caret {
+  animation: caret-blink 1s steps(1, end) infinite;
+}
+
+@keyframes typing-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.animate-typing {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-caret,
+  .animate-typing {
+    animation: none;
+  }
+}
 .link-underline {
   background-image: linear-gradient(currentColor, currentColor);
   background-size: 0% 1px;

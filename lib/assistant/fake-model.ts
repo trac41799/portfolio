@@ -119,7 +119,7 @@ function buildProps(component: UIComponentName): unknown {
 }
 
 export function createFakeBrain(): Brain {
-  return {
+  const brain: Brain = {
     async route(input: BrainInput): Promise<RouteDecision> {
       return decide(input.query);
     },
@@ -146,6 +146,14 @@ export function createFakeBrain(): Brain {
       }
       return base;
     },
+    async *answerStream(input: BrainInput) {
+      const full = await brain.answer(input);
+      const size = 18;
+      for (let i = 0; i < full.length; i += size) {
+        yield { delta: full.slice(i, i + size) };
+        await new Promise((resolve) => setTimeout(resolve, 6));
+      }
+    },
     async props(
       input: BrainInput & { component: UIComponentName },
     ): Promise<unknown> {
@@ -167,4 +175,5 @@ export function createFakeBrain(): Brain {
       return { code: FAKE_WIDGET_CODE, data: { skills: flat } };
     },
   };
+  return brain;
 }

@@ -61,6 +61,32 @@ test("renders a rich markdown answer with an inline html card on the page", asyn
   await expect(page.getByTestId("html-inline").first()).toBeVisible();
 });
 
+test("streams the answer with visible progressive unfolding", async ({ page }) => {
+  await page.goto("/ask");
+  await ask(page, "Who is he, in a few sentences?");
+  const msg = page.getByTestId("assistant-message").first();
+  await expect(msg).toBeVisible();
+  // the reveal engine + token stream produce a caret and growing text
+  await expect(page.getByTestId("streaming-caret")).toBeVisible();
+  const lengths: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    lengths.push(((await msg.textContent()) ?? "").length);
+    await page.waitForTimeout(250);
+  }
+  expect(lengths[lengths.length - 1]).toBeGreaterThan(lengths[0]);
+  expect(lengths.some((l) => l > 0 && l < lengths[lengths.length - 1])).toBe(true);
+});
+
+test("reasoning trail is factual (names real sources, not canned labels)", async ({ page }) => {
+  await page.goto("/ask");
+  await ask(page, "What did he build at Edge8 AI?");
+  const trail = page.getByTestId("reasoning-trail");
+  await expect(trail).toBeVisible();
+  const text = (await trail.textContent()) ?? "";
+  expect(text).toMatch(/Found \d+ source/);
+  expect(text).not.toContain("Understanding your question");
+});
+
 test("renders a pre-templated component on the page", async ({ page }) => {
   await page.goto("/ask");
   await ask(page, "Compare the LMS and Travel Buddy projects");
