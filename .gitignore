@@ -11,3 +11,8 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# testing
+/test-results
+/playwright-report
+/coverage

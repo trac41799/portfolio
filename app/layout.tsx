@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { Instrument_Serif } from "next/font/google";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AskTrac } from "@/components/assistant/ask-trac";
 import { profile } from "@/lib/data";
 import "./globals.css";
 
@@ -50,6 +51,7 @@ export default function RootLayout({
         <SiteNav />
         <main id="main">{children}</main>
         <SiteFooter />
+        <AskTrac />
       </body>
     </html>
   );
