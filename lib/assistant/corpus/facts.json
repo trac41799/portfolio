@@ -1,0 +1,23 @@
+{
+  "identity": {
+    "name": "Nguyen Dang Trac",
+    "role": "AI Automation Engineer",
+    "location": "Vietnam",
+    "availability": "Open to senior AI / full-stack engineering roles",
+    "email": "tracng417@gmail.com",
+    "github": "https://github.com/trac41799",
+    "linkedin": "https://www.linkedin.com/in/trac-nguyen-14a58b313",
+    "languages": ["Vietnamese (native)", "English (IELTS 7.0)"]
+  },
+  "metrics": [
+    { "value": "3+", "label": "Years shipping production software" },
+    { "value": "~40", "label": "Production repositories, 18 months" },
+    { "value": "3", "label": "IEEE publications (1 first-author)" },
+    { "value": "1", "label": "Best Paper Award — ICGHIT 2024" }
+  ],
+  "timeline": [
+    { "date": "2021–2022", "title": "Bosch — Embedded Software Engineer", "detail": "Automotive ECU software; C/Python/XML; CAN/FlexRay; Jenkins CI/CD." },
+    { "date": "2022–2024", "title": "University of Ulsan — Research Assistant", "detail": "Deep learning for error-correction coding; first-author IEEE; Best Paper ICGHIT 2024." },
+    { "date": "2025–present", "title": "Edge8 AI — AI Automation Engineer", "detail": "~40 production repos: multi-agent systems, RAG, multi-tenant SaaS on Supabase + Vercel." }
+  ]
+}
