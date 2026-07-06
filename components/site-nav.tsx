@@ -9,6 +9,7 @@ const nav = [
   { href: "/", label: "Index" },
   { href: "/work", label: "Work" },
   { href: "/about", label: "About" },
+  { href: "/ask", label: "Ask" },
 ];
 
 export function SiteNav() {
