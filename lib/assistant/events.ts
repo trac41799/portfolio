@@ -6,6 +6,7 @@ export type AssistantEvent =
   | { type: "ui"; component: UIComponent }
   | { type: "artifact"; id: string; title: string; html: string }
   | { type: "artifact_replaced"; id: string; html: string }
+  | { type: "react_artifact"; id: string; title: string; code: string; data?: unknown }
   | { type: "followups"; questions: string[] }
   | { type: "error"; message: string }
   | { type: "done" };
@@ -45,6 +46,14 @@ function toWire(e: AssistantEvent): Record<string, unknown> {
       return { type: e.type, id: e.id, title: e.title, html: encodeBase64(e.html) };
     case "artifact_replaced":
       return { type: e.type, id: e.id, html: encodeBase64(e.html) };
+    case "react_artifact":
+      return {
+        type: e.type,
+        id: e.id,
+        title: e.title,
+        code: encodeBase64(e.code),
+        data: e.data ?? null,
+      };
     default:
       return { ...e };
   }
@@ -70,6 +79,14 @@ function fromWire(w: Record<string, unknown>): AssistantEvent | null {
         };
       case "artifact_replaced":
         return { type, id: String(w.id ?? ""), html: decodeBase64(String(w.html ?? "")) };
+      case "react_artifact":
+        return {
+          type,
+          id: String(w.id ?? ""),
+          title: String(w.title ?? ""),
+          code: decodeBase64(String(w.code ?? "")),
+          data: w.data,
+        };
       case "followups":
         return { type, questions: (w.questions as string[]) ?? [] };
       case "error":

@@ -21,6 +21,7 @@ function createMessage(
     reasoning: [],
     ui: [],
     artifacts: [],
+    reactWidgets: [],
     followups: [],
   };
 }
@@ -53,6 +54,20 @@ function applyEvent(update: Updater, event: AssistantEvent): void {
         artifacts: m.artifacts.map((a) =>
           a.id === event.id ? { ...a, html: event.html } : a,
         ),
+      }));
+      break;
+    case "react_artifact":
+      update((m) => ({
+        ...m,
+        reactWidgets: [
+          ...m.reactWidgets,
+          {
+            id: event.id,
+            title: event.title,
+            code: event.code,
+            data: event.data,
+          },
+        ],
       }));
       break;
     case "followups":

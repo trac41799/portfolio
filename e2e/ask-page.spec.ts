@@ -76,3 +76,21 @@ test("renders a sandboxed generated-HTML artifact on the page", async ({ page })
   expect(sandbox).not.toContain("allow-scripts");
   expect(sandbox).not.toContain("allow-same-origin");
 });
+
+test("renders and runs a sandboxed generated-React widget", async ({ page }) => {
+  await page.goto("/ask");
+  await ask(page, "Show an interactive skills widget");
+
+  const frame = page.getByTestId("react-frame");
+  await expect(frame).toBeVisible();
+  const sandbox = (await frame.getAttribute("sandbox")) ?? "";
+  expect(sandbox).toContain("allow-scripts");
+  expect(sandbox).not.toContain("allow-same-origin");
+
+  // Interact INSIDE the origin-isolated iframe (React + Babel load from CDN).
+  const inner = page.frameLocator('[data-testid="react-frame"]');
+  const toggle = inner.getByTestId("widget-toggle");
+  await expect(toggle).toBeVisible({ timeout: 25_000 });
+  await toggle.click();
+  await expect(inner.getByTestId("widget-skill").first()).toBeVisible();
+});

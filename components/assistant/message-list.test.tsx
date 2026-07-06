@@ -18,6 +18,7 @@ const message: ChatMessage = {
     },
   ],
   artifacts: [],
+  reactWidgets: [],
   followups: ["Tell me more", "Show the timeline"],
 };
 
@@ -26,5 +27,26 @@ describe("MessageList", () => {
     render(<MessageList messages={[message]} />);
     expect(screen.getByTestId("ui-comparison")).toBeInTheDocument();
     expect(screen.getAllByTestId("followup")).toHaveLength(2);
+  });
+
+  it("renders a sandboxed React widget frame", () => {
+    const withWidget: ChatMessage = {
+      ...message,
+      id: "2",
+      ui: [],
+      followups: [],
+      reactWidgets: [
+        {
+          id: "r1",
+          title: "Interactive view",
+          code: "function Widget(){ return <div>hi</div>; }",
+          data: { n: 1 },
+        },
+      ],
+    };
+    render(<MessageList messages={[withWidget]} />);
+    const frame = screen.getByTestId("react-frame") as HTMLIFrameElement;
+    expect(frame.getAttribute("sandbox")).toContain("allow-scripts");
+    expect(frame.getAttribute("sandbox")).not.toContain("allow-same-origin");
   });
 });

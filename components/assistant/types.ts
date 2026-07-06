@@ -7,6 +7,7 @@ export interface ChatMessage {
   reasoning: string[];
   ui: UIComponent[];
   artifacts: { id: string; title: string; html: string }[];
+  reactWidgets: { id: string; title: string; code: string; data?: unknown }[];
   followups: string[];
   error?: string;
 }

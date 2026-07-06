@@ -6,6 +6,7 @@ import type { Brain, BrainInput, RouteDecision } from "./provider";
 const REFUSE_RE =
   /weather|stock price|recipe|capital of|\b\d+\s*[+\-*/]\s*\d+\b|ignore (previous|above)|system prompt|tell me a joke/;
 const COMPARISON_RE = /compare|comparison|versus|\bvs\b|difference between/;
+const REACT_RE = /interactive|widget|toggle|calculator|playground|explore/;
 const ARTIFACT_RE =
   /one[- ]?page|poster|brochure|recruiter summary|design (a|me)|summary/;
 const TIMELINE_RE =
@@ -19,6 +20,7 @@ function decide(query: string): RouteDecision {
   const q = query.toLowerCase();
   if (REFUSE_RE.test(q)) return { route: "refuse" };
   if (COMPARISON_RE.test(q)) return { route: "renderUI", component: "comparison" };
+  if (REACT_RE.test(q)) return { route: "makeReactWidget" };
   if (ARTIFACT_RE.test(q)) return { route: "makeArtifact" };
   if (TIMELINE_RE.test(q)) return { route: "renderUI", component: "timeline" };
   if (PUBLICATION_RE.test(q))
@@ -28,6 +30,27 @@ function decide(query: string): RouteDecision {
   if (CONTACT_RE.test(q)) return { route: "renderUI", component: "contactCard" };
   return { route: "answer" };
 }
+
+const FAKE_WIDGET_CODE = `function Widget({ data }) {
+  const [open, setOpen] = useState(false);
+  const skills = (data && data.skills) || ["TypeScript", "Python", "LangGraph", "RAG"];
+  return (
+    <div style={{ padding: 12, color: "#ededea", fontFamily: "system-ui", fontSize: 14 }}>
+      <button
+        data-testid="widget-toggle"
+        onClick={() => setOpen(function (o) { return !o; })}
+        style={{ border: "1px solid #e5b567", borderRadius: 8, padding: "6px 12px", background: "transparent", color: "#e5b567", cursor: "pointer" }}
+      >
+        {open ? "Hide skills" : "Show skills"}
+      </button>
+      {open ? (
+        <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+          {skills.map(function (s, i) { return <li key={i} data-testid="widget-skill">{s}</li>; })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}`;
 
 function buildProps(component: UIComponentName): unknown {
   switch (component) {
@@ -138,6 +161,10 @@ export function createFakeBrain(): Brain {
         "<li>3 IEEE publications, including a Best Paper Award at ICGHIT 2024</li>",
         "</ul>",
       ].join("");
+    },
+    async reactWidget(_input: BrainInput): Promise<{ code: string; data?: unknown }> {
+      const flat = skills.flatMap((s) => s.items).slice(0, 6);
+      return { code: FAKE_WIDGET_CODE, data: { skills: flat } };
     },
   };
 }

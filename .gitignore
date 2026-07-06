@@ -18,3 +18,5 @@ next-env.d.ts
 /coverage
 
 *.tsbuildinfo
+
+real-render-check.mjs

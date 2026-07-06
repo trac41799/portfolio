@@ -13,6 +13,13 @@ const samples: AssistantEvent[] = [
   },
   { type: "artifact", id: "a1", title: "Summary", html: '<div class="x">Hi & bye</div>\n<p>ok</p>' },
   { type: "artifact_replaced", id: "a1", html: "<div>enhanced</div>" },
+  {
+    type: "react_artifact",
+    id: "r1",
+    title: "Interactive view",
+    code: "function Widget({ data }) { return <div>{data.n}</div>; }",
+    data: { n: 42, items: ["a", "b"] },
+  },
   { type: "followups", questions: ["What next?", "Show research"] },
   { type: "error", message: "boom" },
   { type: "done" },

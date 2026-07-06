@@ -9,6 +9,7 @@ import { safeParseUIComponent, type UIComponentName } from "./contracts";
 import type { Brain } from "./provider";
 import { retrieve } from "./retriever";
 import { sanitizeArtifact } from "./sanitize";
+import { validateReactCode } from "./react-validator";
 
 const REFUSE_RE =
   /weather|stock price|recipe|capital of|\b\d+\s*[+\-*/]\s*\d+\b|ignore (previous|above)|system prompt|tell me a joke/;
@@ -207,6 +208,49 @@ export function buildGraph(brain: Brain) {
         return {};
       },
     )
+    .addNode(
+      "makeReactWidget",
+      async (state, config: LangGraphRunnableConfig) => {
+        try {
+          const { code, data } = await brain.reactWidget({
+            query: state.query,
+            context: state.context,
+          });
+          const verdict = validateReactCode(code);
+          if (!verdict.ok) throw new Error(verdict.reason ?? "invalid widget");
+          config.writer?.({
+            type: "reasoning",
+            step: "Building an interactive view",
+          });
+          config.writer?.({
+            type: "react_artifact",
+            id: "react-1",
+            title: "Interactive view",
+            code,
+            data,
+          });
+          config.writer?.({
+            type: "content",
+            text: "Here's an interactive view — try clicking around inside it.",
+          });
+          config.writer?.({
+            type: "followups",
+            questions: followupsFor(state.query),
+          });
+        } catch {
+          const text = await brain.answer({
+            query: state.query,
+            context: state.context,
+          });
+          config.writer?.({ type: "content", text });
+          config.writer?.({
+            type: "followups",
+            questions: followupsFor(state.query),
+          });
+        }
+        return {};
+      },
+    )
     .addEdge(START, "guard")
     .addConditionalEdges(
       "guard",
@@ -222,6 +266,8 @@ export function buildGraph(brain: Brain) {
             return "renderUI";
           case "makeArtifact":
             return "makeArtifact";
+          case "makeReactWidget":
+            return "makeReactWidget";
           case "refuse":
             return "refuse";
           default:
@@ -231,6 +277,7 @@ export function buildGraph(brain: Brain) {
       {
         renderUI: "renderUI",
         makeArtifact: "makeArtifact",
+        makeReactWidget: "makeReactWidget",
         refuse: "refuse",
         answer: "answer",
       },
@@ -238,6 +285,7 @@ export function buildGraph(brain: Brain) {
     .addEdge("answer", END)
     .addEdge("renderUI", END)
     .addEdge("makeArtifact", END)
+    .addEdge("makeReactWidget", END)
     .addEdge("refuse", END);
 
   return graph.compile();

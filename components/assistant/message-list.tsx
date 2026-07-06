@@ -2,6 +2,7 @@
 
 import { GenerativeUIRenderer } from "./generative-ui";
 import { ArtifactSandbox } from "./artifact-sandbox";
+import { ReactArtifactSandbox } from "./react-artifact-sandbox";
 import { MarkdownRenderer } from "./markdown/markdown-renderer";
 import type { ChatMessage } from "./types";
 
@@ -61,6 +62,15 @@ export function MessageList({
                 key={artifact.id}
                 html={artifact.html}
                 title={artifact.title}
+              />
+            ))}
+
+            {message.reactWidgets.map((widget) => (
+              <ReactArtifactSandbox
+                key={widget.id}
+                code={widget.code}
+                data={widget.data}
+                title={widget.title}
               />
             ))}
 

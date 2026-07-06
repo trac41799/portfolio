@@ -3,6 +3,7 @@ import { runAssistant } from "./runAssistant";
 import { buildGraph } from "./graph";
 import { getBrain } from "./provider";
 import { uiComponentSchema } from "./contracts";
+import { validateReactCode } from "./react-validator";
 import type { AssistantEvent } from "./events";
 import type { Message } from "./types";
 
@@ -54,6 +55,20 @@ describe("runAssistant", () => {
     if (artifact.type !== "artifact") throw new Error("expected an artifact");
     expect(artifact.html.length).toBeGreaterThan(0);
     expect(artifact.html.includes("<script")).toBe(false);
+    expect(events[events.length - 1]).toEqual({ type: "done" });
+  });
+
+  it("builds a valid, safe interactive React widget", async () => {
+    const events = await collect(ask("show an interactive skills widget"));
+    const widgets = events.filter((e) => e.type === "react_artifact");
+    expect(widgets.length).toBe(1);
+    const widget = widgets[0];
+    if (widget.type !== "react_artifact") throw new Error("expected a widget");
+    expect(widget.code).toMatch(/function Widget/);
+    expect(validateReactCode(widget.code).ok).toBe(true);
+    expect(events.some((e) => e.type === "ui" || e.type === "artifact")).toBe(
+      false,
+    );
     expect(events[events.length - 1]).toEqual({ type: "done" });
   });
 
